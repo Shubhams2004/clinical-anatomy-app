@@ -8,9 +8,13 @@ scene.background = new THREE.Color(0x111111);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.5, 4);
 
+// Initialize Clipping Plane (Cutting along Z-axis)
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.0);
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.localClippingEnabled = true; // Enable clipping planes globally on renderer
 document.body.appendChild(renderer.domElement);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
@@ -36,7 +40,7 @@ let originalMaterial = null;
 let targetCameraPos = null;
 let targetControlTarget = null;
 
-// Mobile Menu Toggle Logic
+// Mobile Menu Toggle
 const menuToggle = document.getElementById('menu-toggle');
 const controlPanel = document.getElementById('control-panel');
 
@@ -46,9 +50,18 @@ if (menuToggle && controlPanel) {
         controlPanel.classList.toggle('open');
     });
 
-    // Close menu when tapping on the 3D canvas
     renderer.domElement.addEventListener('click', () => {
         controlPanel.classList.remove('open');
+    });
+}
+
+function applyClippingToMaterials(object) {
+    object.traverse((child) => {
+        if (child.isMesh && child.material) {
+            child.material.clippingPlanes = [clipPlane];
+            child.material.clipShadows = true;
+            child.material.side = THREE.DoubleSide; // Render inside faces of cut objects
+        }
     });
 }
 
@@ -59,7 +72,9 @@ function createFallbackAnatomy() {
         roughness: 0.3, 
         metalness: 0.1,
         transparent: true,
-        opacity: 1.0
+        opacity: 1.0,
+        clippingPlanes: [clipPlane],
+        side: THREE.DoubleSide
     });
 
     const part1 = new THREE.Mesh(new THREE.SphereGeometry(0.75, 32, 32), mat.clone());
@@ -106,6 +121,7 @@ loader.load('./models/sample_organ.glb', (gltf) => {
         }
     });
 
+    applyClippingToMaterials(loadedModel);
     scene.add(loadedModel);
 }, undefined, () => {
     createFallbackAnatomy();
@@ -121,6 +137,7 @@ function selectAndFocusMesh(mesh) {
 
     const highlightMaterial = selectedMesh.material.clone();
     highlightMaterial.color.setHex(0x4da6ff);
+    highlightMaterial.clippingPlanes = [clipPlane];
     selectedMesh.material = highlightMaterial;
 
     const partName = selectedMesh.name || "Anatomical Structure Segment";
@@ -134,7 +151,7 @@ function selectAndFocusMesh(mesh) {
     targetCameraPos = meshCenter.clone().add(new THREE.Vector3(0, 0.4, 1.8));
 }
 
-// Tap / Selection Handling
+// Raycaster Click / Tap
 window.addEventListener('pointerdown', (event) => {
     if (event.target.closest('#control-panel') || event.target.closest('#menu-toggle') || event.target.closest('#selection-box')) return;
 
@@ -188,6 +205,12 @@ if (searchInput) {
 }
 
 // UI Event Listeners
+document.getElementById('clipSlider').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    clipPlane.constant = val;
+    document.getElementById('clipVal').innerText = val.toFixed(2);
+});
+
 document.getElementById('colorPicker').addEventListener('input', (e) => {
     baseColorHex = e.target.value;
     const selectedColor = new THREE.Color(baseColorHex);
