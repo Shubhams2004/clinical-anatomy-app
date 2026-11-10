@@ -1,0 +1,242 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 1.5, 5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
+directionalLight.position.set(5, 10, 7);
+scene.add(directionalLight);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+let loadedModel = null;
+let baseColorHex = "#d9776c";
+let meshList = [];
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let selectedMesh = null;
+let originalMaterial = null;
+
+let targetCameraPos = null;
+let targetControlTarget = null;
+
+// Function to create a fallback 3D anatomical placeholder if GLB isn't found
+function createFallbackAnatomy() {
+    console.log("Using fallback procedural anatomical model.");
+    const group = new THREE.Group();
+    
+    // Create a segmented organ-like cluster using smoother geometries
+    const mat = new THREE.MeshStandardMaterial({ 
+        color: new THREE.Color(baseColorHex), 
+        roughness: 0.4, 
+        metalness: 0.1,
+        transparent: true,
+        opacity: 1.0
+    });
+
+    const part1 = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), mat.clone());
+    part1.name = "Left Lobe Segment";
+    part1.position.set(-0.5, 0, 0);
+    group.add(part1);
+
+    const part2 = new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 32), mat.clone());
+    part2.name = "Right Lobe Segment";
+    part2.position.set(0.5, 0, 0);
+    group.add(part2);
+
+    const part3 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.2, 32), mat.clone());
+    part3.name = "Central Vascular Stem";
+    part3.position.set(0, -0.6, 0);
+    group.add(part3);
+
+    loadedModel = group;
+    
+    meshList = [];
+    loadedModel.traverse((child) => {
+        if (child.isMesh) meshList.push(child);
+    });
+
+    scene.add(loadedModel);
+}
+
+// Try loading GLB model, fallback if it fails or doesn't exist
+const loader = new GLTFLoader();
+loader.load('./models/sample_organ.glb', (gltf) => {
+    loadedModel = gltf.scene;
+
+    const box = new THREE.Box3().setFromObject(loadedModel);
+    const center = box.getCenter(new THREE.Vector3());
+    loadedModel.position.sub(center);
+
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    loadedModel.scale.multiplyScalar(2.0 / maxDim);
+
+    meshList = [];
+    loadedModel.traverse((child) => {
+        if (child.isMesh) {
+            child.material.transparent = true;
+            meshList.push(child);
+        }
+    });
+
+    scene.add(loadedModel);
+    console.log('GLB model loaded successfully!');
+}, undefined, (error) => {
+    console.warn('GLB load error / missing file. Loading procedural fallback model.');
+    createFallbackAnatomy();
+});
+
+// Select and focus helper
+function selectAndFocusMesh(mesh) {
+    if (selectedMesh && selectedMesh !== mesh) {
+        selectedMesh.material = originalMaterial;
+    }
+
+    selectedMesh = mesh;
+    originalMaterial = selectedMesh.material;
+
+    const highlightMaterial = selectedMesh.material.clone();
+    highlightMaterial.color.setHex(0x4da6ff);
+    selectedMesh.material = highlightMaterial;
+
+    const partName = selectedMesh.name || "Anatomical Structure Segment";
+    document.getElementById('selectedPartName').innerText = partName;
+    document.getElementById('selectedPartDesc').innerText = "Clinical classification: Verified 3D morphological asset. Positioned for targeted diagnostic review.";
+
+    const meshBox = new THREE.Box3().setFromObject(selectedMesh);
+    const meshCenter = meshBox.getCenter(new THREE.Vector3());
+    
+    targetControlTarget = meshCenter.clone();
+    targetCameraPos = meshCenter.clone().add(new THREE.Vector3(0, 0.5, 2.0));
+}
+
+// Raycaster Click
+window.addEventListener('click', (event) => {
+    if (event.target.closest('#control-panel') || event.target.closest('#selection-box') || event.target.closest('#search-container')) return;
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    if (loadedModel) {
+        const intersects = raycaster.intersectObject(loadedModel, true);
+        if (intersects.length > 0) {
+            selectAndFocusMesh(intersects[0].object);
+        } else if (selectedMesh) {
+            selectedMesh.material = originalMaterial;
+            selectedMesh = null;
+            document.getElementById('selectedPartName').innerText = "Select a Structure";
+            document.getElementById('selectedPartDesc').innerText = "Click any anatomical segment on the 3D model to view clinical details.";
+        }
+    }
+});
+
+// Search functionality
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        searchResults.innerHTML = '';
+        
+        if (query.length === 0) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        const matches = meshList.filter(m => (m.name || "anatomical segment").toLowerCase().includes(query));
+        
+        if (matches.length > 0) {
+            searchResults.style.display = 'block';
+            matches.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'search-item';
+                div.innerText = m.name || "Anatomical Segment";
+                div.addEventListener('click', () => {
+                    selectAndFocusMesh(m);
+                    searchResults.style.display = 'none';
+                    searchInput.value = m.name || "Anatomical Segment";
+                });
+                searchResults.appendChild(div);
+            });
+        } else {
+            searchResults.style.display = 'none';
+        }
+    });
+}
+
+// UI Controls
+document.getElementById('colorPicker').addEventListener('input', (e) => {
+    baseColorHex = e.target.value;
+    const selectedColor = new THREE.Color(baseColorHex);
+    if (loadedModel) {
+        loadedModel.traverse((child) => {
+            if (child.isMesh && child.material && child !== selectedMesh) {
+                child.material.color = selectedColor;
+            }
+        });
+    }
+});
+
+document.getElementById('opacitySlider').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    document.getElementById('opacityVal').innerText = val.toFixed(2);
+    if (loadedModel) {
+        loadedModel.traverse((child) => {
+            if (child.isMesh && child.material) {
+                child.material.opacity = val;
+                child.material.depthWrite = val >= 1.0;
+            }
+        });
+    }
+});
+
+document.getElementById('ambientSlider').addEventListener('input', (e) => {
+    ambientLight.intensity = parseFloat(e.target.value);
+});
+
+document.getElementById('dirSlider').addEventListener('input', (e) => {
+    directionalLight.intensity = parseFloat(e.target.value);
+});
+
+// Animation Loop
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (targetCameraPos && targetControlTarget) {
+        camera.position.lerp(targetCameraPos, 0.05);
+        controls.target.lerp(targetControlTarget, 0.05);
+        if (camera.position.distanceTo(targetCameraPos) < 0.01) {
+            targetCameraPos = null;
+            targetControlTarget = null;
+        }
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});

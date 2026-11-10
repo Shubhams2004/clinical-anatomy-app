@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical 3D Human Anatomy Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; font-family: sans-serif; color: #fff; }
+        #info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 12px; border-radius: 6px; z-index: 10; }
+        #search-container {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            z-index: 10; width: 280px;
+        }
+        #searchInput {
+            width: 100%; padding: 10px 14px; border-radius: 20px; border: 1px solid #444;
+            background: rgba(0,0,0,0.85); color: #fff; font-size: 14px; outline: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); box-sizing: border-box;
+        }
+        #searchInput:focus { border-color: #4da6ff; }
+        #searchResults {
+            position: absolute; top: 45px; left: 0; width: 100%; background: rgba(20,20,20,0.95);
+            border-radius: 8px; max-height: 180px; overflow-y: auto; display: none;
+            border: 1px solid #333; z-index: 11; box-sizing: border-box;
+        }
+        .search-item { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #222; }
+        .search-item:hover { background: #4da6ff; color: #fff; }
+        #selection-box { 
+            position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.85); 
+            padding: 15px; border-radius: 8px; z-index: 10; width: 300px; border-left: 4px solid #4da6ff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        #selection-box h4 { margin: 0 0 5px 0; color: #4da6ff; font-size: 15px; }
+        #selection-box p { margin: 5px 0 0 0; font-size: 13px; color: #ccc; line-height: 1.4; }
+        #control-panel { 
+            position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); 
+            padding: 15px; border-radius: 8px; z-index: 10; width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+        }
+        #control-panel h4 { margin: 0 0 10px 0; color: #4da6ff; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        .control-group { margin-bottom: 10px; font-size: 13px; }
+        .control-group label { display: block; margin-bottom: 4px; color: #ccc; }
+        .control-group input[type="range"], .control-group input[type="color"] { width: 100%; cursor: pointer; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3 style="margin:0 0 5px 0; font-size:16px;">Clinical Anatomy 3D</h3>
+        <p style="margin:0; font-size:12px; color:#aaa;">Interactive Client-Side Viewer</p>
+    </div>
+
+    <!-- Search Bar -->
+    <div id="search-container">
+        <input type="text" id="searchInput" placeholder="🔍 Search anatomical part..." autocomplete="off">
+        <div id="searchResults"></div>
+    </div>
+
+    <!-- Clinical Metadata Info Card -->
+    <div id="selection-box">
+        <h4 id="selectedPartName">Select a Structure</h4>
+        <p id="selectedPartDesc">Click any anatomical segment on the 3D model to view clinical details, tissue composition, and surgical notes.</p>
+    </div>
+
+    <!-- Control Panel -->
+    <div id="control-panel">
+        <h4>Viewer Controls</h4>
+        <div class="control-group">
+            <label for="colorPicker">Anatomy Color</label>
+            <input type="color" id="colorPicker" value="#d9776c">
+        </div>
+        <div class="control-group">
+            <label for="opacitySlider">X-Ray Opacity (<span id="opacityVal">1.0</span>)</label>
+            <input type="range" id="opacitySlider" min="0.1" max="1.0" step="0.05" value="1.0">
+        </div>
+        <div class="control-group">
+            <label for="ambientSlider">Ambient Light</label>
+            <input type="range" id="ambientSlider" min="0" max="3" step="0.1" value="1.2">
+        </div>
+        <div class="control-group">
+            <label for="dirSlider">Directional Light</label>
+            <input type="range" id="dirSlider" min="0" max="5" step="0.1" value="2.0">
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="./script.js"></script>
+</body>
+</html>
