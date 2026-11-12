@@ -65,6 +65,16 @@
         .control-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #4da6ff; }
         .control-group input[type="color"] { width: 100%; height: 38px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
         
+        /* Custom File Upload Styling */
+        .upload-label {
+            display: block; width: 100%; background: rgba(77, 166, 255, 0.15);
+            border: 1px dashed #4da6ff; color: #4da6ff; text-align: center;
+            padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; margin-bottom: 15px;
+        }
+        .upload-label:hover { background: #4da6ff; color: #fff; }
+        #modelUpload { display: none; }
+
         #structureTree {
             max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3);
             border-radius: 6px; padding: 6px; border: 1px solid rgba(255,255,255,0.1);
@@ -107,7 +117,6 @@
         .search-item { padding: 10px 12px; cursor: pointer; font-size: 12px; border-bottom: 1px solid #333; }
         .search-item:hover { background: #4da6ff; color: #fff; }
 
-        /* Enhanced Clinical Selection Card */
         #selection-box { 
             position: absolute; bottom: 16px; left: 16px; right: 16px; max-width: 420px;
             background: rgba(18, 18, 18, 0.92); backdrop-filter: blur(12px);
@@ -143,7 +152,7 @@
         canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
 
         @media (min-width: 768px) {
-            #control-panel { right: 0; top: 12px; right: 12px; height: auto; border-radius: 12px; padding: 20px; }
+            #control-panel { right: 0; top: 12px; right: 12px; height: auto; max-height: 92vh; border-radius: 12px; padding: 20px; }
             #menu-toggle { display: none; }
             #selection-box { right: auto; width: 360px; }
         }
@@ -152,12 +161,16 @@
 <body>
     <div id="info">
         <h3>Clinical Anatomy 3D</h3>
-        <p>Interactive Mobile Viewer</p>
+        <p id="modelStatus">Interactive Mobile Viewer</p>
     </div>
 
     <button id="menu-toggle">⚙️ Controls</button>
 
     <div id="control-panel">
+        <h4>Custom 3D Asset</h4>
+        <label for="modelUpload" class="upload-label">📂 Load Local .GLB / .GLTF</label>
+        <input type="file" id="modelUpload" accept=".glb,.gltf">
+
         <h4>Structure Search</h4>
         <div id="search-container">
             <input type="text" id="searchInput" placeholder="🔍 Search part..." autocomplete="off">

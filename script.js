@@ -53,7 +53,6 @@ let originalMaterial = null;
 let targetCameraPos = null;
 let targetControlTarget = null;
 
-// Clinical Anatomy Knowledge Base Dictionary
 const clinicalDatabase = {
     "Left Lobe Segment": {
         function: "Primary parenchymal division responsible for metabolic processing, vascular filtration, and structural lobe volume.",
@@ -81,6 +80,8 @@ const speakBtn = document.getElementById('speakBtn');
 const pathologyBox = document.getElementById('pathologyBox');
 const pathologyText = document.getElementById('pathologyText');
 const functionLabel = document.getElementById('functionLabel');
+const modelUpload = document.getElementById('modelUpload');
+const modelStatus = document.getElementById('modelStatus');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -93,18 +94,15 @@ if (menuToggle && controlPanel) {
     });
 }
 
-// Web Speech API Pronunciation Handler
 speakBtn.addEventListener('click', () => {
     if (!selectedMesh) return;
     const textToSpeak = selectedMesh.name || "Anatomical Segment";
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Stop any ongoing speech
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.rate = 0.9; // Slightly slower for clear medical pronunciation
+        utterance.rate = 0.9;
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
-    } else {
-        alert("Audio pronunciation is not supported in this browser.");
     }
 });
 
@@ -124,28 +122,82 @@ function populateStructureTree() {
     });
 }
 
+function clearCurrentModel() {
+    if (loadedModel) {
+        // Remove all CSS2D labels attached to children
+        loadedModel.traverse((child) => {
+            const labels = child.children.filter(c => c.isCSS2DObject);
+            labels.forEach(l => {
+                if (l.element && l.element.parentNode) {
+                    l.element.parentNode.removeChild(l.element);
+                }
+                child.remove(l);
+            });
+        });
+        scene.remove(loadedModel);
+        loadedModel = null;
+    }
+    meshList = [];
+    selectedMesh = null;
+    originalMaterial = null;
+    clearSelectionUI();
+}
+
 function applyClippingAndAddLabels(object) {
+    let partCounter = 1;
     object.traverse((child) => {
         if (child.isMesh && child.material) {
+            if (!child.name || child.name.trim() === "") {
+                child.name = `Anatomical Segment ${partCounter++}`;
+            }
+            child.material.transparent = true;
             child.material.clippingPlanes = activeClippingPlanes;
             child.material.clipShadows = true;
             child.material.side = THREE.DoubleSide;
 
             const div = document.createElement('div');
             div.className = 'annotation-label';
-            div.textContent = child.name || "Segment";
+            div.textContent = child.name;
             
             const label = new CSS2DObject(div);
             const box = new THREE.Box3().setFromObject(child);
             const center = box.getCenter(new THREE.Vector3());
-            label.position.set(0, box.max.y - center.y + 0.1, 0);
+            label.position.set(0, box.max.y - center.y + 0.08, 0);
             
             child.add(label);
+            meshList.push(child);
         }
     });
 }
 
+function normalizeAndMountModel(modelRoot, labelName = "Custom Model") {
+    clearCurrentModel();
+    loadedModel = modelRoot;
+
+    // Center and scale model to fit clinical viewport (max dimension = 2.0 units)
+    const box = new THREE.Box3().setFromObject(loadedModel);
+    const center = box.getCenter(new THREE.Vector3());
+    loadedModel.position.sub(center);
+
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) {
+        loadedModel.scale.multiplyScalar(2.0 / maxDim);
+    }
+
+    // Wrap in parent group so scaling/pulsing stays centered
+    const wrapper = new THREE.Group();
+    wrapper.add(loadedModel);
+    loadedModel = wrapper;
+
+    applyClippingAndAddLabels(loadedModel);
+    scene.add(loadedModel);
+    populateStructureTree();
+    modelStatus.innerText = `Loaded: ${labelName}`;
+}
+
 function createFallbackAnatomy() {
+    clearCurrentModel();
     const group = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({ 
         color: new THREE.Color(baseColorHex), 
@@ -173,42 +225,39 @@ function createFallbackAnatomy() {
     group.add(part3);
 
     loadedModel = group;
-    meshList = [];
-    loadedModel.traverse((child) => {
-        if (child.isMesh) meshList.push(child);
-    });
-
     applyClippingAndAddLabels(loadedModel);
     scene.add(loadedModel);
     populateStructureTree();
+    modelStatus.innerText = "Reference Organ Model";
 }
 
 const loader = new GLTFLoader();
 loader.load('./models/sample_organ.glb', (gltf) => {
-    loadedModel = gltf.scene;
-
-    const box = new THREE.Box3().setFromObject(loadedModel);
-    const center = box.getCenter(new THREE.Vector3());
-    loadedModel.position.sub(center);
-
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    loadedModel.scale.multiplyScalar(2.0 / maxDim);
-
-    meshList = [];
-    loadedModel.traverse((child) => {
-        if (child.isMesh) {
-            child.material.transparent = true;
-            meshList.push(child);
-        }
-    });
-
-    applyClippingAndAddLabels(loadedModel);
-    scene.add(loadedModel);
-    populateStructureTree();
+    normalizeAndMountModel(gltf.scene, "Sample Organ");
 }, undefined, () => {
     createFallbackAnatomy();
 });
+
+// Local File Upload Handler (.glb / .gltf)
+if (modelUpload) {
+    modelUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        modelStatus.innerText = "Parsing 3D asset...";
+        const objectURL = URL.createObjectURL(file);
+
+        loader.load(objectURL, (gltf) => {
+            normalizeAndMountModel(gltf.scene, file.name);
+            URL.revokeObjectURL(objectURL);
+            controlPanel.classList.remove('open');
+        }, undefined, (err) => {
+            console.error("Model load error:", err);
+            alert("Could not parse 3D model. Please ensure it is a valid .glb or .gltf file.");
+            modelStatus.innerText = "Load Failed";
+        });
+    });
+}
 
 function clearSelectionUI() {
     document.getElementById('selectedPartName').innerText = "Select a Structure";
@@ -236,7 +285,6 @@ function selectAndFocusMesh(mesh) {
     const partName = selectedMesh.name || "Anatomical Structure Segment";
     document.getElementById('selectedPartName').innerText = partName;
 
-    // Lookup Clinical Data or Provide Standard Fallback Metadata
     const clinicalInfo = clinicalDatabase[partName] || {
         function: `Specialized morphological tissue segment (${partName}) maintaining structural integrity and physiological homeostasis.`,
         pathology: "Evaluate for localized inflammation, structural hypertrophy, or vascular compromise."
