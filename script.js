@@ -302,14 +302,15 @@ function createFallbackAnatomy() {
     modelStatus.innerText = "Reference Organ Model";
 }
 
-const loader = new GLTFLoader();
-modelStatus.innerText = "Loading 3D asset...";
+// Initialize immediately with fallback anatomy so canvas is never black
+createFallbackAnatomy();
 
+// Try loading sample model in background if available
+const loader = new GLTFLoader();
 loader.load('./models/sample_organ.glb', (gltf) => {
     normalizeAndMountModel(gltf.scene, "Sample Organ");
 }, undefined, (err) => {
-    console.warn("Sample model not found, loading reference organ model.", err);
-    createFallbackAnatomy();
+    console.log("Using built-in reference anatomy model.");
 });
 
 if (modelUpload) {
