@@ -23,7 +23,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 6px;
         }
 
-        /* CSS2D Annotation Label Styling */
         .annotation-label {
             background: rgba(15, 15, 15, 0.85);
             border: 1px solid #4da6ff;
@@ -80,22 +79,30 @@
         .search-item { padding: 10px 12px; cursor: pointer; font-size: 12px; border-bottom: 1px solid #333; }
         .search-item:hover { background: #4da6ff; color: #fff; }
 
+        /* Metadata & Action Panel */
         #selection-box { 
             position: absolute; bottom: 16px; left: 16px; right: 16px; max-width: 400px;
             background: rgba(18, 18, 18, 0.9); backdrop-filter: blur(10px);
             padding: 14px 16px; border-radius: 10px; z-index: 10; border-left: 4px solid #4da6ff;
             border-top: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            pointer-events: none;
         }
         #selection-box h4 { margin: 0 0 4px 0; color: #4da6ff; font-size: 14px; }
-        #selection-box p { margin: 0; font-size: 12px; color: #ccc; line-height: 1.4; }
+        #selection-box p { margin: 0 0 10px 0; font-size: 12px; color: #ccc; line-height: 1.4; }
+        
+        .action-buttons { display: flex; gap: 8px; }
+        .action-btn {
+            background: #2a2a2a; color: #fff; border: 1px solid rgba(255,255,255,0.15);
+            padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .action-btn:hover { background: #4da6ff; border-color: #4da6ff; }
 
         canvas { display: block; width: 100vw; height: 100vh; }
 
         @media (min-width: 768px) {
             #control-panel { right: 0; top: 12px; right: 12px; height: auto; border-radius: 12px; padding: 20px; }
             #menu-toggle { display: none; }
-            #selection-box { right: auto; width: 320px; }
+            #selection-box { right: auto; width: 340px; }
         }
     </style>
 </head>
@@ -142,6 +149,11 @@
     <div id="selection-box">
         <h4 id="selectedPartName">Select a Structure</h4>
         <p id="selectedPartDesc">Tap any anatomical segment to inspect clinical metadata.</p>
+        <div class="action-buttons">
+            <button class="action-btn" id="isolateBtn" style="display:none;">Isolate</button>
+            <button class="action-btn" id="hideBtn" style="display:none;">Hide</button>
+            <button class="action-btn" id="resetViewBtn">Reset Visibility</button>
+        </div>
     </div>
 
     <script type="importmap">

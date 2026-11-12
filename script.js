@@ -17,12 +17,11 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.localClippingEnabled = true;
 document.body.appendChild(renderer.domElement);
 
-// Initialize CSS2D Label Renderer
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
 labelRenderer.domElement.style.position = 'absolute';
 labelRenderer.domElement.style.top = '0px';
-labelRenderer.domElement.style.pointerEvents = 'none'; // Allow click-through to canvas
+labelRenderer.domElement.style.pointerEvents = 'none';
 document.body.appendChild(labelRenderer.domElement);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
@@ -50,6 +49,9 @@ let targetControlTarget = null;
 
 const menuToggle = document.getElementById('menu-toggle');
 const controlPanel = document.getElementById('control-panel');
+const isolateBtn = document.getElementById('isolateBtn');
+const hideBtn = document.getElementById('hideBtn');
+const resetViewBtn = document.getElementById('resetViewBtn');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -69,14 +71,11 @@ function applyClippingAndAddLabels(object) {
             child.material.clipShadows = true;
             child.material.side = THREE.DoubleSide;
 
-            // Create floating label element
             const div = document.createElement('div');
             div.className = 'annotation-label';
             div.textContent = child.name || "Segment";
             
             const label = new CSS2DObject(div);
-            
-            // Position label slightly above the mesh center
             const box = new THREE.Box3().setFromObject(child);
             const center = box.getCenter(new THREE.Vector3());
             label.position.set(0, box.max.y - center.y + 0.1, 0);
@@ -165,6 +164,10 @@ function selectAndFocusMesh(mesh) {
     const partName = selectedMesh.name || "Anatomical Structure Segment";
     document.getElementById('selectedPartName').innerText = partName;
     document.getElementById('selectedPartDesc').innerText = "Clinical status: Active segment. Verified 3D morphological asset.";
+    
+    // Show action buttons
+    isolateBtn.style.display = 'block';
+    hideBtn.style.display = 'block';
 
     const meshBox = new THREE.Box3().setFromObject(selectedMesh);
     const meshCenter = meshBox.getCenter(new THREE.Vector3());
@@ -172,6 +175,44 @@ function selectAndFocusMesh(mesh) {
     targetControlTarget = meshCenter.clone();
     targetCameraPos = meshCenter.clone().add(new THREE.Vector3(0, 0.4, 1.8));
 }
+
+// Isolation & Visibility Actions
+isolateBtn.addEventListener('click', () => {
+    if (!loadedModel || !selectedMesh) return;
+    loadedModel.traverse((child) => {
+        if (child.isMesh) {
+            child.visible = (child === selectedMesh);
+        }
+    });
+});
+
+hideBtn.addEventListener('click', () => {
+    if (!selectedMesh) return;
+    selectedMesh.visible = false;
+    selectedMesh.material = originalMaterial;
+    selectedMesh = null;
+    document.getElementById('selectedPartName').innerText = "Select a Structure";
+    document.getElementById('selectedPartDesc').innerText = "Tap any anatomical segment to inspect clinical metadata.";
+    isolateBtn.style.display = 'none';
+    hideBtn.style.display = 'none';
+});
+
+resetViewBtn.addEventListener('click', () => {
+    if (!loadedModel) return;
+    loadedModel.traverse((child) => {
+        if (child.isMesh) {
+            child.visible = true;
+        }
+    });
+    if (selectedMesh) {
+        selectedMesh.material = originalMaterial;
+        selectedMesh = null;
+    }
+    document.getElementById('selectedPartName').innerText = "Select a Structure";
+    document.getElementById('selectedPartDesc').innerText = "Tap any anatomical segment to inspect clinical metadata.";
+    isolateBtn.style.display = 'none';
+    hideBtn.style.display = 'none';
+});
 
 window.addEventListener('pointerdown', (event) => {
     if (event.target.closest('#control-panel') || event.target.closest('#menu-toggle') || event.target.closest('#selection-box')) return;
@@ -202,7 +243,7 @@ if (searchInput) {
             return;
         }
 
-        const matches = meshList.filter(m => (m.name || "anatomical segment").toLowerCase().includes(query));
+        const matches = meshList.filter(m => (m.name || "anatomical segment").toLowerCase().includes(query) && m.visible);
         
         if (matches.length > 0) {
             searchResults.style.display = 'block';
@@ -277,7 +318,7 @@ function animate() {
 
     controls.update();
     renderer.render(scene, camera);
-    labelRenderer.render(scene, camera); // Render floating annotation tags
+    labelRenderer.render(scene, camera);
 }
 animate();
 
