@@ -23,6 +23,33 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 6px;
         }
 
+        /* CSS2D Annotation Label Styling */
+        .annotation-label {
+            background: rgba(15, 15, 15, 0.85);
+            border: 1px solid #4da6ff;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .annotation-label::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: #4da6ff transparent;
+            display: block;
+            width: 0;
+        }
+
         #control-panel { 
             position: absolute; top: 0; right: -320px; width: 300px; height: 100vh;
             background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(12px);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -8,14 +9,21 @@ scene.background = new THREE.Color(0x111111);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.5, 4);
 
-// Initialize Clipping Plane (Cutting along Z-axis)
 const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.localClippingEnabled = true; // Enable clipping planes globally on renderer
+renderer.localClippingEnabled = true;
 document.body.appendChild(renderer.domElement);
+
+// Initialize CSS2D Label Renderer
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0px';
+labelRenderer.domElement.style.pointerEvents = 'none'; // Allow click-through to canvas
+document.body.appendChild(labelRenderer.domElement);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
 scene.add(ambientLight);
@@ -40,7 +48,6 @@ let originalMaterial = null;
 let targetCameraPos = null;
 let targetControlTarget = null;
 
-// Mobile Menu Toggle
 const menuToggle = document.getElementById('menu-toggle');
 const controlPanel = document.getElementById('control-panel');
 
@@ -55,12 +62,26 @@ if (menuToggle && controlPanel) {
     });
 }
 
-function applyClippingToMaterials(object) {
+function applyClippingAndAddLabels(object) {
     object.traverse((child) => {
         if (child.isMesh && child.material) {
             child.material.clippingPlanes = [clipPlane];
             child.material.clipShadows = true;
-            child.material.side = THREE.DoubleSide; // Render inside faces of cut objects
+            child.material.side = THREE.DoubleSide;
+
+            // Create floating label element
+            const div = document.createElement('div');
+            div.className = 'annotation-label';
+            div.textContent = child.name || "Segment";
+            
+            const label = new CSS2DObject(div);
+            
+            // Position label slightly above the mesh center
+            const box = new THREE.Box3().setFromObject(child);
+            const center = box.getCenter(new THREE.Vector3());
+            label.position.set(0, box.max.y - center.y + 0.1, 0);
+            
+            child.add(label);
         }
     });
 }
@@ -98,6 +119,7 @@ function createFallbackAnatomy() {
         if (child.isMesh) meshList.push(child);
     });
 
+    applyClippingAndAddLabels(loadedModel);
     scene.add(loadedModel);
 }
 
@@ -121,7 +143,7 @@ loader.load('./models/sample_organ.glb', (gltf) => {
         }
     });
 
-    applyClippingToMaterials(loadedModel);
+    applyClippingAndAddLabels(loadedModel);
     scene.add(loadedModel);
 }, undefined, () => {
     createFallbackAnatomy();
@@ -151,7 +173,6 @@ function selectAndFocusMesh(mesh) {
     targetCameraPos = meshCenter.clone().add(new THREE.Vector3(0, 0.4, 1.8));
 }
 
-// Raycaster Click / Tap
 window.addEventListener('pointerdown', (event) => {
     if (event.target.closest('#control-panel') || event.target.closest('#menu-toggle') || event.target.closest('#selection-box')) return;
 
@@ -168,7 +189,6 @@ window.addEventListener('pointerdown', (event) => {
     }
 });
 
-// Search Logic
 const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
 
@@ -204,7 +224,6 @@ if (searchInput) {
     });
 }
 
-// UI Event Listeners
 document.getElementById('clipSlider').addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
     clipPlane.constant = val;
@@ -258,6 +277,7 @@ function animate() {
 
     controls.update();
     renderer.render(scene, camera);
+    labelRenderer.render(scene, camera); // Render floating annotation tags
 }
 animate();
 
@@ -265,4 +285,5 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
 });
