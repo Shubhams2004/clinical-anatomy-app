@@ -2,267 +2,261 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Clinical 3D Human Anatomy Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Anatomy 3D</title>
     <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; overflow: hidden; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; touch-action: none; }
-        
-        #info { 
-            position: absolute; top: 12px; left: 12px; 
-            background: rgba(15, 15, 15, 0.85); backdrop-filter: blur(8px);
-            padding: 10px 14px; border-radius: 8px; z-index: 10; border: 1px solid rgba(255,255,255,0.1);
-        }
-        #info h3 { margin: 0 0 2px 0; font-size: 14px; font-weight: 600; color: #4da6ff; }
-        #info p { margin: 0; font-size: 11px; color: #aaa; }
-
-        #menu-toggle {
-            position: absolute; top: 12px; right: 12px; z-index: 20;
-            background: #4da6ff; color: #fff; border: none; padding: 10px 14px;
-            border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 6px;
-        }
-
-        .annotation-label {
-            background: rgba(15, 15, 15, 0.85);
-            border: 1px solid #4da6ff;
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 500;
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            white-space: nowrap;
-            transition: all 0.2s ease;
         }
-        .annotation-label::after {
-            content: '';
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
             position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 5px 5px 0;
-            border-style: solid;
-            border-color: #4da6ff transparent;
-            display: block;
-            width: 0;
+            top: 0;
+            left: 0;
         }
-
-        #control-panel { 
-            position: absolute; top: 0; right: -320px; width: 300px; height: 100vh;
-            background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(12px);
-            padding: 70px 20px 20px 20px; z-index: 15; overflow-y: auto;
+        /* Top Navigation Header */
+        #header {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .app-title {
+            background: rgba(17, 17, 17, 0.85);
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+        }
+        .app-title h1 {
+            font-size: 15px;
+            margin: 0;
+            color: #4da6ff;
+            font-weight: 600;
+        }
+        .app-title p {
+            font-size: 11px;
+            margin: 2px 0 0 0;
+            color: #aaa;
+        }
+        #menu-toggle {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            pointer-events: auto;
+            transition: background 0.2s;
+        }
+        #menu-toggle:hover {
+            background: #1d4ed8;
+        }
+        /* Control Panel Drawer */
+        #control-panel {
+            position: absolute;
+            top: 0;
+            right: -320px;
+            width: 300px;
+            height: 100vh;
+            background: rgba(18, 18, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-left: 1px solid rgba(255,255,255,0.1); box-shadow: -5px 0 25px rgba(0,0,0,0.6);
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
         }
-        #control-panel.open { right: 0; }
-        #control-panel h4 { margin: 15px 0 10px 0; color: #4da6ff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
-        #control-panel h4:first-of-type { margin-top: 0; }
-
-        .control-group { margin-bottom: 14px; font-size: 13px; }
-        .control-group label { display: block; margin-bottom: 4px; color: #ddd; font-weight: 500; font-size: 12px; }
-        .control-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #4da6ff; }
-        .control-group input[type="color"] { width: 100%; height: 38px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
-        
-        .upload-label {
-            display: block; width: 100%; background: rgba(77, 166, 255, 0.15);
-            border: 1px dashed #4da6ff; color: #4da6ff; text-align: center;
-            padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
-            cursor: pointer; transition: all 0.2s; margin-bottom: 15px;
+        #control-panel.open {
+            right: 0;
         }
-        .upload-label:hover { background: #4da6ff; color: #fff; }
-        #modelUpload { display: none; }
-
+        .panel-section {
+            margin-bottom: 24px;
+        }
+        .panel-section h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4da6ff;
+            margin-bottom: 10px;
+        }
+        .panel-btn {
+            width: 100%;
+            background: #2a2a2e;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-align: left;
+            transition: background 0.2s;
+        }
+        .panel-btn:hover {
+            background: #3a3a40;
+        }
+        .active-mode {
+            background: #2563eb !important;
+            border-color: #60a5fa !important;
+        }
+        .active-pulse {
+            background: #dc2626 !important;
+        }
+        /* Structure Tree Directory */
         #structureTree {
-            max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3);
-            border-radius: 6px; padding: 6px; border: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 5px;
         }
         .tree-item {
-            padding: 6px 10px; font-size: 12px; color: #ddd; cursor: pointer;
-            border-radius: 4px; margin-bottom: 2px; transition: background 0.2s;
-            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .tree-item:hover { background: rgba(77, 166, 255, 0.2); color: #4da6ff; }
-
-        .view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 15px; }
-        .view-btn {
-            background: #222; color: #ddd; border: 1px solid rgba(255,255,255,0.15);
-            padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer;
-            transition: all 0.2s;
+        .tree-item:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
-        .view-btn:hover { background: #4da6ff; color: #fff; border-color: #4da6ff; }
-        .view-btn.active-mode { background: #4da6ff; color: #fff; border-color: #4da6ff; }
-
-        .snapshot-btn {
-            width: 100%; background: #4da6ff; color: #fff; border: none; padding: 10px;
-            border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 5px;
-            transition: background 0.2s;
-        }
-        .snapshot-btn:hover { background: #3399ff; }
-
-        #search-container { margin-bottom: 15px; position: relative; }
+        /* Search Box */
         #searchInput {
-            width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(30, 30, 30, 0.9); color: #fff; font-size: 13px; outline: none;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+            box-sizing: border-box;
+            outline: none;
         }
-        #searchInput:focus { border-color: #4da6ff; }
         #searchResults {
-            position: absolute; top: 42px; left: 0; width: 100%; background: #222;
-            border-radius: 6px; max-height: 150px; overflow-y: auto; display: none;
-            border: 1px solid #444; z-index: 25;
+            max-height: 120px;
+            overflow-y: auto;
+            background: #1e1e24;
+            border-radius: 6px;
+            margin-top: 4px;
+            display: none;
         }
-        .search-item { padding: 10px 12px; cursor: pointer; font-size: 12px; border-bottom: 1px solid #333; }
-        .search-item:hover { background: #4da6ff; color: #fff; }
-
-        #selection-box { 
-            position: absolute; bottom: 16px; left: 16px; right: 16px; max-width: 420px;
-            background: rgba(18, 18, 18, 0.92); backdrop-filter: blur(12px);
-            padding: 14px 16px; border-radius: 10px; z-index: 10; border-left: 4px solid #4da6ff;
-            border-top: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        .search-item {
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        #selection-box h4 { margin: 0; color: #4da6ff; font-size: 15px; }
-        
-        #speakBtn {
-            background: rgba(77, 166, 255, 0.15); color: #4da6ff; border: 1px solid #4da6ff;
-            padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer;
-            display: none; align-items: center; gap: 4px; transition: all 0.2s;
+        .search-item:hover {
+            background: #2563eb;
         }
-        #speakBtn:hover { background: #4da6ff; color: #fff; }
-
-        .meta-section { font-size: 12px; color: #ccc; line-height: 1.45; margin-bottom: 8px; }
-        .meta-label { color: #888; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-top: 4px; }
-        #pathologyBox {
-            background: rgba(255, 99, 71, 0.1); border-left: 2px solid #ff6347;
-            padding: 6px 8px; border-radius: 4px; font-size: 11px; color: #ffb3a7;
-            margin-bottom: 10px; display: none;
+        /* Sliders */
+        .slider-group {
+            margin-bottom: 12px;
         }
-        
-        .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 4px;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            accent-color: #2563eb;
+        }
+        /* Bottom Selection Info Card */
+        #selection-box {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(18, 18, 20, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 16px;
+            border-radius: 14px;
+            z-index: 10;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #selectedPartName {
+            font-size: 15px;
+            font-weight: 600;
+            color: #4da6ff;
+            margin: 0 0 4px 0;
+        }
+        #selectedPartDesc {
+            font-size: 12px;
+            color: #bbb;
+            margin: 0 0 12px 0;
+            line-height: 1.4;
+        }
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
         .action-btn {
-            background: #2a2a2a; color: #fff; border: 1px solid rgba(255,255,255,0.15);
-            padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer;
-            transition: background 0.2s;
+            background: #2a2a2e;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 500;
         }
-        .action-btn:hover { background: #4da6ff; border-color: #4da6ff; }
-
-        canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
-
-        @media (min-width: 768px) {
-            #control-panel { right: 0; top: 12px; right: 12px; height: auto; max-height: 92vh; border-radius: 12px; padding: 20px; }
-            #menu-toggle { display: none; }
-            #selection-box { right: auto; width: 360px; }
+        .action-btn:hover {
+            background: #3a3a40;
+        }
+        /* Quiz Banner */
+        #quiz-banner {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            right: 20px;
+            background: rgba(37, 99, 235, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 10px 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 9;
+            display: none;
+        }
+        /* CSS2D Annotation Labels */
+        .annotation-label {
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            white-space: nowrap;
+            backdrop-filter: blur(4px);
         }
     </style>
-</head>
-<body>
-    <div id="info">
-        <h3>Clinical Anatomy 3D</h3>
-        <p id="modelStatus">Interactive Mobile Viewer</p>
-    </div>
-
-    <button id="menu-toggle">⚙️ Controls</button>
-
-    <div id="control-panel">
-        <h4>Custom 3D Asset</h4>
-        <label for="modelUpload" class="upload-label">📂 Load Local .GLB / .GLTF</label>
-        <input type="file" id="modelUpload" accept=".glb,.gltf">
-
-        <h4>Structure Search</h4>
-        <div id="search-container">
-            <input type="text" id="searchInput" placeholder="🔍 Search part..." autocomplete="off">
-            <div id="searchResults"></div>
-        </div>
-
-        <h4>Structure Directory</h4>
-        <div id="structureTree">
-            <div style="padding: 6px; font-size: 11px; color: #888; text-align: center;">Loading segments...</div>
-        </div>
-
-        <h4>Clinical Tools</h4>
-        <div class="view-grid">
-            <button class="view-btn" id="labelToggle">🏷️ Hide Labels</button>
-            <button class="view-btn" id="rulerToggle">📏 Ruler Tool</button>
-        </div>
-
-        <h4>Physiological Simulation</h4>
-        <div class="view-grid">
-            <button class="view-btn" id="pulseToggle" style="grid-column: span 2;">💓 Simulate Cardiac Rhythm</button>
-        </div>
-
-        <h4>Multi-Axis Slicing (MPR)</h4>
-        <div class="control-group">
-            <label for="clipX">Sagittal (X-Axis): <span id="valX">2.0</span></label>
-            <input type="range" id="clipX" min="-2.0" max="2.0" step="0.05" value="2.0">
-        </div>
-        <div class="control-group">
-            <label for="clipY">Coronal (Y-Axis): <span id="valY">2.0</span></label>
-            <input type="range" id="clipY" min="-2.0" max="2.0" step="0.05" value="2.0">
-        </div>
-        <div class="control-group">
-            <label for="clipZ">Axial (Z-Axis): <span id="valZ">2.0</span></label>
-            <input type="range" id="clipZ" min="-2.0" max="2.0" step="0.05" value="2.0">
-        </div>
-
-        <h4>Render Modality</h4>
-        <div class="view-grid">
-            <button class="view-btn" id="modeSolid">Solid View</button>
-            <button class="view-btn" id="modeWireframe">Wireframe</button>
-            <button class="view-btn" id="modeXray" style="grid-column: span 2;">Translucent X-Ray</button>
-        </div>
-
-        <h4>Clinical Viewpoints</h4>
-        <div class="view-grid">
-            <button class="view-btn" id="viewAnterior">Anterior (Front)</button>
-            <button class="view-btn" id="viewPosterior">Posterior (Back)</button>
-            <button class="view-btn" id="viewLateralL">Left Lateral</button>
-            <button class="view-btn" id="viewLateralR">Right Lateral</button>
-            <button class="view-btn" id="viewSuperior" style="grid-column: span 2;">Superior (Top)</button>
-        </div>
-
-        <h4>Viewer Settings</h4>
-        <div class="control-group">
-            <label for="colorPicker">Anatomy Color</label>
-            <input type="color" id="colorPicker" value="#d9776c">
-        </div>
-        <div class="control-group">
-            <label for="opacitySlider">X-Ray Opacity (<span id="opacityVal">1.0</span>)</label>
-            <input type="range" id="opacitySlider" min="0.1" max="1.0" step="0.05" value="1.0">
-        </div>
-        <div class="control-group">
-            <label for="ambientSlider">Ambient Light</label>
-            <input type="range" id="ambientSlider" min="0" max="3" step="0.1" value="1.2">
-        </div>
-        <div class="control-group">
-            <label for="dirSlider">Directional Light</label>
-            <input type="range" id="dirSlider" min="0" max="5" step="0.1" value="2.0">
-        </div>
-        <div class="control-group">
-            <button class="snapshot-btn" id="snapshotBtn">📸 Capture Snapshot</button>
-        </div>
-    </div>
-
-    <div id="selection-box">
-        <div class="header-row">
-            <h4 id="selectedPartName">Select a Structure</h4>
-            <button id="speakBtn">🔊 Pronounce</button>
-        </div>
-        <div class="meta-section">
-            <span class="meta-label" id="functionLabel" style="display:none;">Physiological Function</span>
-            <p id="selectedPartDesc" style="margin: 2px 0 0 0;">Tap any anatomical segment to inspect clinical metadata & pathology notes.</p>
-        </div>
-        <div id="pathologyBox">
-            <strong>⚠️ Clinical Pathology:</strong> <span id="pathologyText"></span>
-        </div>
-        <div class="action-buttons">
-            <button class="action-btn" id="isolateBtn" style="display:none;">Isolate</button>
-            <button class="action-btn" id="hideBtn" style="display:none;">Hide</button>
-            <button class="action-btn" id="resetViewBtn">Reset Visibility</button>
-        </div>
-    </div>
-
+    <!-- Import Map to resolve bare ES module specifiers for Three.js and Addons -->
     <script type="importmap">
         {
             "imports": {
@@ -271,6 +265,125 @@
             }
         }
     </script>
+</head>
+<body>
+
+    <div id="header">
+        <div class="app-title">
+            <h1>Clinical Anatomy 3D</h1>
+            <p>Interactive Mobile Viewer</p>
+        </div>
+        <button id="menu-toggle">Controls</button>
+    </div>
+
+    <div id="quiz-banner">
+        <span id="quizPrompt">Find and click structure...</span>
+    </div>
+
+    <div id="control-panel">
+        <div class="panel-section">
+            <h3>Custom 3D Asset</h3>
+            <input type="file" id="modelUpload" accept=".glb,.gltf" style="display: none;">
+            <button class="panel-btn" onclick="document.getElementById('modelUpload').click()">📁 Load Local .GLB / .GLTF</button>
+            <p id="modelStatus" style="font-size: 11px; color: #888; margin: 4px 0 0 0;">Status: Ready</p>
+        </div>
+
+        <div class="panel-section">
+            <h3>Structure Search</h3>
+            <input type="text" id="searchInput" placeholder="Search part...">
+            <div id="searchResults"></div>
+        </div>
+
+        <div class="panel-section">
+            <h3>Structure Directory</h3>
+            <div id="structureTree">Loading segments...</div>
+        </div>
+
+        <div class="panel-section">
+            <h3>Clinical Tools</h3>
+            <button class="panel-btn" id="labelToggle">🏷️ Hide Labels</button>
+            <button class="panel-btn" id="rulerToggle">📏 Ruler Tool</button>
+            <button class="panel-btn" id="quizToggle">🎓 Start Quiz Mode</button>
+        </div>
+
+        <div class="panel-section">
+            <h3>Physiological Simulation</h3>
+            <button class="panel-btn" id="pulseToggle">💓 Simulate Cardiac Rhythm</button>
+        </div>
+
+        <div class="panel-section">
+            <h3>Multi-Axis Slicing (MPR)</h3>
+            <div class="slider-group">
+                <label><span>Sagittal (X-Axis):</span> <span id="valX">2.00</span></label>
+                <input type="range" id="clipX" min="-2" max="2" step="0.05" value="2">
+            </div>
+            <div class="slider-group">
+                <label><span>Coronal (Y-Axis):</span> <span id="valY">2.00</span></label>
+                <input type="range" id="clipY" min="-2" max="2" step="0.05" value="2">
+            </div>
+            <div class="slider-group">
+                <label><span>Axial (Z-Axis):</span> <span id="valZ">2.00</span></label>
+                <input type="range" id="clipZ" min="-2" max="2" step="0.05" value="2">
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h3>Render Modality</h3>
+            <div style="display: flex; gap: 6px;">
+                <button class="panel-btn" id="modeSolid" style="text-align:center;">Solid View</button>
+                <button class="panel-btn" id="modeWireframe" style="text-align:center;">Wireframe</button>
+            </div>
+            <button class="panel-btn" id="modeXray" style="text-align:center;">X-Ray Translucent</button>
+        </div>
+
+        <div class="panel-section">
+            <h3>Standard Views</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <button class="panel-btn" id="viewAnterior" style="text-align:center;">Anterior</button>
+                <button class="panel-btn" id="viewPosterior" style="text-align:center;">Posterior</button>
+                <button class="panel-btn" id="viewLateralL" style="text-align:center;">Left Lat</button>
+                <button class="panel-btn" id="viewLateralR" style="text-align:center;">Right Lat</button>
+            </div>
+            <button class="panel-btn" id="viewSuperior" style="text-align:center; margin-top: 6px;">Superior View</button>
+        </div>
+
+        <div class="panel-section">
+            <h3>Customization</h3>
+            <div class="slider-group">
+                <label>Tissue Base Color</label>
+                <input type="color" id="colorPicker" value="#d9776c" style="width:100%; height:32px; background:none; border:none; cursor:pointer;">
+            </div>
+            <div class="slider-group">
+                <label><span>Opacity:</span> <span id="opacityVal">1.00</span></label>
+                <input type="range" id="opacitySlider" min="0.1" max="1.0" step="0.05" value="1.0">
+            </div>
+            <div class="slider-group">
+                <label>Ambient Light</label>
+                <input type="range" id="ambientSlider" min="0.2" max="3.0" step="0.1" value="1.2">
+            </div>
+            <div class="slider-group">
+                <label>Directional Light</label>
+                <input type="range" id="dirSlider" min="0.2" max="4.0" step="0.1" value="2.0">
+            </div>
+        </div>
+    </div>
+
+    <div id="selection-box">
+        <h2 id="selectedPartName">Select a Structure</h2>
+        <p id="selectedPartDesc">Tap any anatomical segment to inspect clinical metadata & pathology notes.</p>
+        <div id="functionLabel" style="font-size: 11px; color: #aaa; margin-bottom: 8px; display: none;"></div>
+        <div id="pathologyBox" style="font-size: 11px; background: rgba(220, 38, 38, 0.15); border-left: 3px solid #dc2626; padding: 6px 8px; border-radius: 4px; margin-bottom: 10px; display: none;">
+            <strong>Pathology Note:</strong> <span id="pathologyText"></span>
+        </div>
+        <div class="card-actions">
+            <button class="action-btn" id="isolateBtn" style="display:none;">Isolate Part</button>
+            <button class="action-btn" id="hideBtn" style="display:none;">Hide Part</button>
+            <button class="action-btn" id="speakBtn" style="display:none;">🔊 Read Name</button>
+            <button class="action-btn" id="resetViewBtn">Reset Visibility</button>
+            <button class="action-btn" id="snapshotBtn">📸 Snapshot</button>
+        </div>
+    </div>
+
     <script type="module" src="./script.js"></script>
 </body>
 </html>
