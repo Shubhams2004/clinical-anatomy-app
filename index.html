@@ -6,7 +6,7 @@
     <title>Clinical 3D Human Anatomy Viewer</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; overflow: hidden; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; }
+        body { margin: 0; overflow: hidden; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; touch-action: none; }
         
         #info { 
             position: absolute; top: 12px; left: 12px; 
@@ -103,7 +103,7 @@
         }
         .action-btn:hover { background: #4da6ff; border-color: #4da6ff; }
 
-        canvas { display: block; width: 100vw; height: 100vh; }
+        canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
 
         @media (min-width: 768px) {
             #control-panel { right: 0; top: 12px; right: 12px; height: auto; border-radius: 12px; padding: 20px; }

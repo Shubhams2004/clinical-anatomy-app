@@ -34,6 +34,8 @@ scene.add(directionalLight);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+controls.minDistance = 0.5;   // Prevent camera from collapsing inside or flipping past center
+controls.maxDistance = 15.0;  // Prevent camera from flying away
 
 let loadedModel = null;
 let baseColorHex = "#d9776c";
@@ -213,7 +215,6 @@ resetViewBtn.addEventListener('click', () => {
     hideBtn.style.display = 'none';
 });
 
-// Snapshot Download Handler
 snapshotBtn.addEventListener('click', () => {
     renderer.render(scene, camera);
     const dataURL = renderer.domElement.toDataURL('image/png');
