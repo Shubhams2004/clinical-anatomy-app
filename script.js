@@ -237,6 +237,44 @@ snapshotBtn.addEventListener('click', () => {
     link.click();
 });
 
+// Render Modality Switchers
+document.getElementById('modeSolid').addEventListener('click', () => {
+    if (!loadedModel) return;
+    loadedModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+            child.material.wireframe = false;
+            child.material.opacity = 1.0;
+            child.material.depthWrite = true;
+        }
+    });
+    controlPanel.classList.remove('open');
+});
+
+document.getElementById('modeWireframe').addEventListener('click', () => {
+    if (!loadedModel) return;
+    loadedModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+            child.material.wireframe = true;
+            child.material.opacity = 1.0;
+            child.material.depthWrite = true;
+        }
+    });
+    controlPanel.classList.remove('open');
+});
+
+document.getElementById('modeXray').addEventListener('click', () => {
+    if (!loadedModel) return;
+    loadedModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+            child.material.wireframe = false;
+            child.material.opacity = 0.35;
+            child.material.depthWrite = false;
+        }
+    });
+    controlPanel.classList.remove('open');
+});
+
+// Viewpoint Transitions
 function setCameraView(pos, target = new THREE.Vector3(0, 0, 0)) {
     targetCameraPos = pos;
     targetControlTarget = target;
