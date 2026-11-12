@@ -55,6 +55,7 @@ const isolateBtn = document.getElementById('isolateBtn');
 const hideBtn = document.getElementById('hideBtn');
 const resetViewBtn = document.getElementById('resetViewBtn');
 const snapshotBtn = document.getElementById('snapshotBtn');
+const structureTree = document.getElementById('structureTree');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -64,6 +65,22 @@ if (menuToggle && controlPanel) {
 
     renderer.domElement.addEventListener('click', () => {
         controlPanel.classList.remove('open');
+    });
+}
+
+function populateStructureTree() {
+    if (!structureTree) return;
+    structureTree.innerHTML = '';
+
+    meshList.forEach((mesh, index) => {
+        const div = document.createElement('div');
+        div.className = 'tree-item';
+        div.innerHTML = `<span>🔹 ${mesh.name || 'Segment ' + (index + 1)}</span> <span style="font-size:10px; color:#888;">Select</span>`;
+        div.addEventListener('click', () => {
+            selectAndFocusMesh(mesh);
+            controlPanel.classList.remove('open');
+        });
+        structureTree.appendChild(div);
     });
 }
 
@@ -123,6 +140,7 @@ function createFallbackAnatomy() {
 
     applyClippingAndAddLabels(loadedModel);
     scene.add(loadedModel);
+    populateStructureTree();
 }
 
 const loader = new GLTFLoader();
@@ -147,6 +165,7 @@ loader.load('./models/sample_organ.glb', (gltf) => {
 
     applyClippingAndAddLabels(loadedModel);
     scene.add(loadedModel);
+    populateStructureTree();
 }, undefined, () => {
     createFallbackAnatomy();
 });
@@ -218,7 +237,6 @@ snapshotBtn.addEventListener('click', () => {
     link.click();
 });
 
-// Viewpoint Transitions
 function setCameraView(pos, target = new THREE.Vector3(0, 0, 0)) {
     targetCameraPos = pos;
     targetControlTarget = target;

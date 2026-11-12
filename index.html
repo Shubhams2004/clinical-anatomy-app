@@ -65,6 +65,19 @@
         .control-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #4da6ff; }
         .control-group input[type="color"] { width: 100%; height: 38px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
         
+        /* Structure Tree List */
+        #structureTree {
+            max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.3);
+            border-radius: 6px; padding: 6px; border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 15px;
+        }
+        .tree-item {
+            padding: 6px 10px; font-size: 12px; color: #ddd; cursor: pointer;
+            border-radius: 4px; margin-bottom: 2px; transition: background 0.2s;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .tree-item:hover { background: rgba(77, 166, 255, 0.2); color: #4da6ff; }
+
         /* Viewpoint Buttons Grid */
         .view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 15px; }
         .view-btn {
@@ -81,7 +94,7 @@
         }
         .snapshot-btn:hover { background: #3399ff; }
 
-        #search-container { margin-bottom: 20px; position: relative; }
+        #search-container { margin-bottom: 15px; position: relative; }
         #searchInput {
             width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
             background: rgba(30, 30, 30, 0.9); color: #fff; font-size: 13px; outline: none;
@@ -134,6 +147,11 @@
         <div id="search-container">
             <input type="text" id="searchInput" placeholder="🔍 Search part..." autocomplete="off">
             <div id="searchResults"></div>
+        </div>
+
+        <h4>Structure Directory</h4>
+        <div id="structureTree">
+            <div style="padding: 6px; font-size: 11px; color: #888; text-align: center;">Loading segments...</div>
         </div>
 
         <h4>Clinical Viewpoints</h4>
