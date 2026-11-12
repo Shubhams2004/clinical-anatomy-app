@@ -9,7 +9,6 @@ scene.background = new THREE.Color(0x111111);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.5, 4);
 
-// Multi-Axis Clipping Planes (X, Y, Z)
 const clipPlaneX = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 2.0);
 const clipPlaneY = new THREE.Plane(new THREE.Vector3(0, -1, 0), 2.0);
 const clipPlaneZ = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.0);
@@ -44,6 +43,7 @@ controls.maxDistance = 15.0;
 let loadedModel = null;
 let baseColorHex = "#d9776c";
 let meshList = [];
+let isPulsing = false;
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -60,6 +60,7 @@ const hideBtn = document.getElementById('hideBtn');
 const resetViewBtn = document.getElementById('resetViewBtn');
 const snapshotBtn = document.getElementById('snapshotBtn');
 const structureTree = document.getElementById('structureTree');
+const pulseToggle = document.getElementById('pulseToggle');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -241,6 +242,19 @@ snapshotBtn.addEventListener('click', () => {
     link.click();
 });
 
+// Cardiac/Physiological Pulse Toggle
+pulseToggle.addEventListener('click', () => {
+    isPulsing = !isPulsing;
+    if (isPulsing) {
+        pulseToggle.classList.add('active-pulse');
+        pulseToggle.innerText = '⏹ Stop Physiological Rhythm';
+    } else {
+        pulseToggle.classList.remove('active-pulse');
+        pulseToggle.innerText = '💓 Simulate Cardiac Rhythm';
+        if (loadedModel) loadedModel.scale.set(1, 1, 1);
+    }
+});
+
 // Multi-Axis Slicing Listeners
 document.getElementById('clipX').addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
@@ -395,6 +409,12 @@ document.getElementById('dirSlider').addEventListener('input', (e) => {
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // Physiological Pulsation Simulation Loop
+    if (isPulsing && loadedModel) {
+        const pulse = 1.0 + Math.sin(Date.now() * 0.006) * 0.04;
+        loadedModel.scale.set(pulse, pulse, pulse);
+    }
 
     if (targetCameraPos && targetControlTarget) {
         camera.position.lerp(targetCameraPos, 0.08);
