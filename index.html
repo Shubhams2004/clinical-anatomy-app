@@ -65,6 +65,13 @@
         .control-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #4da6ff; }
         .control-group input[type="color"] { width: 100%; height: 38px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
         
+        .snapshot-btn {
+            width: 100%; background: #4da6ff; color: #fff; border: none; padding: 10px;
+            border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 5px;
+            transition: background 0.2s;
+        }
+        .snapshot-btn:hover { background: #3399ff; }
+
         #search-container { margin-bottom: 20px; position: relative; }
         #searchInput {
             width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
@@ -79,7 +86,6 @@
         .search-item { padding: 10px 12px; cursor: pointer; font-size: 12px; border-bottom: 1px solid #333; }
         .search-item:hover { background: #4da6ff; color: #fff; }
 
-        /* Metadata & Action Panel */
         #selection-box { 
             position: absolute; bottom: 16px; left: 16px; right: 16px; max-width: 400px;
             background: rgba(18, 18, 18, 0.9); backdrop-filter: blur(10px);
@@ -143,6 +149,9 @@
         <div class="control-group">
             <label for="dirSlider">Directional Light</label>
             <input type="range" id="dirSlider" min="0" max="5" step="0.1" value="2.0">
+        </div>
+        <div class="control-group">
+            <button class="snapshot-btn" id="snapshotBtn">📸 Capture Snapshot</button>
         </div>
     </div>
 

@@ -11,7 +11,7 @@ camera.position.set(0, 1.5, 4);
 
 const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.0);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.localClippingEnabled = true;
@@ -52,6 +52,7 @@ const controlPanel = document.getElementById('control-panel');
 const isolateBtn = document.getElementById('isolateBtn');
 const hideBtn = document.getElementById('hideBtn');
 const resetViewBtn = document.getElementById('resetViewBtn');
+const snapshotBtn = document.getElementById('snapshotBtn');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -165,7 +166,6 @@ function selectAndFocusMesh(mesh) {
     document.getElementById('selectedPartName').innerText = partName;
     document.getElementById('selectedPartDesc').innerText = "Clinical status: Active segment. Verified 3D morphological asset.";
     
-    // Show action buttons
     isolateBtn.style.display = 'block';
     hideBtn.style.display = 'block';
 
@@ -176,7 +176,6 @@ function selectAndFocusMesh(mesh) {
     targetCameraPos = meshCenter.clone().add(new THREE.Vector3(0, 0.4, 1.8));
 }
 
-// Isolation & Visibility Actions
 isolateBtn.addEventListener('click', () => {
     if (!loadedModel || !selectedMesh) return;
     loadedModel.traverse((child) => {
@@ -212,6 +211,16 @@ resetViewBtn.addEventListener('click', () => {
     document.getElementById('selectedPartDesc').innerText = "Tap any anatomical segment to inspect clinical metadata.";
     isolateBtn.style.display = 'none';
     hideBtn.style.display = 'none';
+});
+
+// Snapshot Download Handler
+snapshotBtn.addEventListener('click', () => {
+    renderer.render(scene, camera);
+    const dataURL = renderer.domElement.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = 'clinical-anatomy-snapshot.png';
+    link.href = dataURL;
+    link.click();
 });
 
 window.addEventListener('pointerdown', (event) => {
