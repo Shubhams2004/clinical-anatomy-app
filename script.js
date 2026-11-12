@@ -44,6 +44,14 @@ let loadedModel = null;
 let baseColorHex = "#d9776c";
 let meshList = [];
 let isPulsing = false;
+let labelsVisible = true;
+let rulerMode = false;
+
+let rulerPointA = null;
+let rulerPointB = null;
+let rulerLine = null;
+let rulerMarkerA = null;
+let rulerMarkerB = null;
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -82,6 +90,8 @@ const pathologyText = document.getElementById('pathologyText');
 const functionLabel = document.getElementById('functionLabel');
 const modelUpload = document.getElementById('modelUpload');
 const modelStatus = document.getElementById('modelStatus');
+const labelToggle = document.getElementById('labelToggle');
+const rulerToggle = document.getElementById('rulerToggle');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -92,6 +102,36 @@ if (menuToggle && controlPanel) {
     renderer.domElement.addEventListener('click', () => {
         controlPanel.classList.remove('open');
     });
+}
+
+// Label Visibility Toggle
+labelToggle.addEventListener('click', () => {
+    labelsVisible = !labelsVisible;
+    labelToggle.classList.toggle('active-mode', !labelsVisible);
+    labelToggle.innerText = labelsVisible ? '🏷️ Hide Labels' : '🏷️ Show Labels';
+    if (loadedModel) {
+        loadedModel.traverse((child) => {
+            child.children.forEach(c => {
+                if (c.isCSS2DObject) c.visible = labelsVisible;
+            });
+        });
+    }
+});
+
+// Ruler Tool Toggle
+rulerToggle.addEventListener('click', () => {
+    rulerMode = !rulerMode;
+    rulerToggle.classList.toggle('active-mode', rulerMode);
+    rulerToggle.innerText = rulerMode ? '📏 Active (Tap 2 pts)' : '📏 Ruler Tool';
+    if (!rulerMode) clearRulerMeasurements();
+});
+
+function clearRulerMeasurements() {
+    rulerPointA = null;
+    rulerPointB = null;
+    if (rulerLine) { scene.remove(rulerLine); rulerLine = null; }
+    if (rulerMarkerA) { scene.remove(rulerMarkerA); rulerMarkerA = null; }
+    if (rulerMarkerB) { scene.remove(rulerMarkerB); rulerMarkerB = null; }
 }
 
 speakBtn.addEventListener('click', () => {
@@ -123,8 +163,8 @@ function populateStructureTree() {
 }
 
 function clearCurrentModel() {
+    clearRulerMeasurements();
     if (loadedModel) {
-        // Remove all CSS2D labels attached to children
         loadedModel.traverse((child) => {
             const labels = child.children.filter(c => c.isCSS2DObject);
             labels.forEach(l => {
@@ -174,7 +214,6 @@ function normalizeAndMountModel(modelRoot, labelName = "Custom Model") {
     clearCurrentModel();
     loadedModel = modelRoot;
 
-    // Center and scale model to fit clinical viewport (max dimension = 2.0 units)
     const box = new THREE.Box3().setFromObject(loadedModel);
     const center = box.getCenter(new THREE.Vector3());
     loadedModel.position.sub(center);
@@ -185,7 +224,6 @@ function normalizeAndMountModel(modelRoot, labelName = "Custom Model") {
         loadedModel.scale.multiplyScalar(2.0 / maxDim);
     }
 
-    // Wrap in parent group so scaling/pulsing stays centered
     const wrapper = new THREE.Group();
     wrapper.add(loadedModel);
     loadedModel = wrapper;
@@ -238,7 +276,6 @@ loader.load('./models/sample_organ.glb', (gltf) => {
     createFallbackAnatomy();
 });
 
-// Local File Upload Handler (.glb / .gltf)
 if (modelUpload) {
     modelUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -419,6 +456,7 @@ document.getElementById('viewLateralL').addEventListener('click', () => setCamer
 document.getElementById('viewLateralR').addEventListener('click', () => setCameraView(new THREE.Vector3(3.5, 0, 0)));
 document.getElementById('viewSuperior').addEventListener('click', () => setCameraView(new THREE.Vector3(0, 3.5, 0.001)));
 
+// Pointer / Click Handler for Selection & Ruler Measurement
 window.addEventListener('pointerdown', (event) => {
     if (event.target.closest('#control-panel') || event.target.closest('#menu-toggle') || event.target.closest('#selection-box')) return;
 
@@ -430,7 +468,42 @@ window.addEventListener('pointerdown', (event) => {
     if (loadedModel) {
         const intersects = raycaster.intersectObject(loadedModel, true);
         if (intersects.length > 0) {
-            selectAndFocusMesh(intersects[0].object);
+            const hitPoint = intersects[0].point;
+
+            if (rulerMode) {
+                // Ruler Measurement Logic
+                const markerGeo = new THREE.SphereGeometry(0.04, 16, 16);
+                const markerMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+
+                if (!rulerPointA) {
+                    rulerPointA = hitPoint.clone();
+                    rulerMarkerA = new THREE.Mesh(markerGeo, markerMat);
+                    rulerMarkerA.position.copy(rulerPointA);
+                    scene.add(rulerMarkerA);
+                    document.getElementById('selectedPartName').innerText = "Ruler: Point A Set";
+                    document.getElementById('selectedPartDesc').innerText = `Coordinates: X:${rulerPointA.x.toFixed(2)} Y:${rulerPointA.y.toFixed(2)} Z:${rulerPointA.z.toFixed(2)}. Tap Point B.`;
+                } else if (!rulerPointB) {
+                    rulerPointB = hitPoint.clone();
+                    rulerMarkerB = new THREE.Mesh(markerGeo, markerMat);
+                    rulerMarkerB.position.copy(rulerPointB);
+                    scene.add(rulerMarkerB);
+
+                    // Draw Line between A and B
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints([rulerPointA, rulerPointB]);
+                    const lineMat = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
+                    rulerLine = new THREE.Line(lineGeo, lineMat);
+                    scene.add(rulerLine);
+
+                    const distance = rulerPointA.distanceTo(rulerPointB);
+                    document.getElementById('selectedPartName').innerText = "Ruler Measurement";
+                    document.getElementById('selectedPartDesc').innerText = `Spatial Distance: ${(distance * 10.0).toFixed(1)} mm (${distance.toFixed(2)} units).`;
+                    
+                    rulerPointA = null; // Reset for next measurement
+                    rulerPointB = null;
+                }
+            } else {
+                selectAndFocusMesh(intersects[0].object);
+            }
         }
     }
 });
