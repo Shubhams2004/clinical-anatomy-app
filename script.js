@@ -34,8 +34,8 @@ scene.add(directionalLight);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.minDistance = 0.5;   // Safe minimum zoom limit
-controls.maxDistance = 15.0;  // Safe maximum zoom limit
+controls.minDistance = 0.5;
+controls.maxDistance = 15.0;
 
 let loadedModel = null;
 let baseColorHex = "#d9776c";
@@ -45,6 +45,9 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let selectedMesh = null;
 let originalMaterial = null;
+
+let targetCameraPos = null;
+let targetControlTarget = null;
 
 const menuToggle = document.getElementById('menu-toggle');
 const controlPanel = document.getElementById('control-panel');
@@ -215,6 +218,19 @@ snapshotBtn.addEventListener('click', () => {
     link.click();
 });
 
+// Viewpoint Transitions
+function setCameraView(pos, target = new THREE.Vector3(0, 0, 0)) {
+    targetCameraPos = pos;
+    targetControlTarget = target;
+    controlPanel.classList.remove('open');
+}
+
+document.getElementById('viewAnterior').addEventListener('click', () => setCameraView(new THREE.Vector3(0, 0, 3.5)));
+document.getElementById('viewPosterior').addEventListener('click', () => setCameraView(new THREE.Vector3(0, 0, -3.5)));
+document.getElementById('viewLateralL').addEventListener('click', () => setCameraView(new THREE.Vector3(-3.5, 0, 0)));
+document.getElementById('viewLateralR').addEventListener('click', () => setCameraView(new THREE.Vector3(3.5, 0, 0)));
+document.getElementById('viewSuperior').addEventListener('click', () => setCameraView(new THREE.Vector3(0, 3.5, 0.001)));
+
 window.addEventListener('pointerdown', (event) => {
     if (event.target.closest('#control-panel') || event.target.closest('#menu-toggle') || event.target.closest('#selection-box')) return;
 
@@ -307,6 +323,16 @@ document.getElementById('dirSlider').addEventListener('input', (e) => {
 
 function animate() {
     requestAnimationFrame(animate);
+
+    if (targetCameraPos && targetControlTarget) {
+        camera.position.lerp(targetCameraPos, 0.08);
+        controls.target.lerp(targetControlTarget, 0.08);
+        if (camera.position.distanceTo(targetCameraPos) < 0.01) {
+            targetCameraPos = null;
+            targetControlTarget = null;
+        }
+    }
+
     controls.update();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);

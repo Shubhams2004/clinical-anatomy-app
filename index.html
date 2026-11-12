@@ -65,6 +65,15 @@
         .control-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #4da6ff; }
         .control-group input[type="color"] { width: 100%; height: 38px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
         
+        /* Viewpoint Buttons Grid */
+        .view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 15px; }
+        .view-btn {
+            background: #222; color: #ddd; border: 1px solid rgba(255,255,255,0.15);
+            padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .view-btn:hover { background: #4da6ff; color: #fff; border-color: #4da6ff; }
+
         .snapshot-btn {
             width: 100%; background: #4da6ff; color: #fff; border: none; padding: 10px;
             border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 5px;
@@ -125,6 +134,15 @@
         <div id="search-container">
             <input type="text" id="searchInput" placeholder="🔍 Search part..." autocomplete="off">
             <div id="searchResults"></div>
+        </div>
+
+        <h4>Clinical Viewpoints</h4>
+        <div class="view-grid">
+            <button class="view-btn" id="viewAnterior">Anterior (Front)</button>
+            <button class="view-btn" id="viewPosterior">Posterior (Back)</button>
+            <button class="view-btn" id="viewLateralL">Left Lateral</button>
+            <button class="view-btn" id="viewLateralR">Right Lateral</button>
+            <button class="view-btn" id="viewSuperior" style="grid-column: span 2;">Superior (Top)</button>
         </div>
 
         <h4>Cross-Section Slicing</h4>
