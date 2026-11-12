@@ -7,7 +7,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 1.5, 4);
+camera.position.set(0, 0, 3.5);
 
 const clipPlaneX = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 2.0);
 const clipPlaneY = new THREE.Plane(new THREE.Vector3(0, -1, 0), 2.0);
@@ -39,6 +39,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.minDistance = 0.5;
 controls.maxDistance = 15.0;
+controls.target.set(0, 0, 0);
 
 let loadedModel = null;
 let baseColorHex = "#d9776c";
@@ -247,6 +248,7 @@ function normalizeAndMountModel(modelRoot, labelName = "Custom Model") {
     clearCurrentModel();
     loadedModel = modelRoot;
 
+    // Center the model precisely at origin (0,0,0)
     const box = new THREE.Box3().setFromObject(loadedModel);
     const center = box.getCenter(new THREE.Vector3());
     loadedModel.position.sub(center);
@@ -257,9 +259,8 @@ function normalizeAndMountModel(modelRoot, labelName = "Custom Model") {
         loadedModel.scale.multiplyScalar(2.0 / maxDim);
     }
 
-    const wrapper = new THREE.Group();
-    wrapper.add(loadedModel);
-    loadedModel = wrapper;
+    controls.target.set(0, 0, 0);
+    camera.position.set(0, 0, 3.5);
 
     applyClippingAndAddLabels(loadedModel);
     scene.add(loadedModel);
@@ -296,16 +297,23 @@ function createFallbackAnatomy() {
     group.add(part3);
 
     loadedModel = group;
+    
+    // Center fallback anatomy perfectly at (0,0,0)
+    const box = new THREE.Box3().setFromObject(loadedModel);
+    const center = box.getCenter(new THREE.Vector3());
+    loadedModel.position.sub(center);
+
+    controls.target.set(0, 0, 0);
+    camera.position.set(0, 0, 3.5);
+
     applyClippingAndAddLabels(loadedModel);
     scene.add(loadedModel);
     populateStructureTree();
     modelStatus.innerText = "Reference Organ Model";
 }
 
-// Initialize immediately with fallback anatomy so canvas is never black
 createFallbackAnatomy();
 
-// Try loading sample model in background if available
 const loader = new GLTFLoader();
 loader.load('./models/sample_organ.glb', (gltf) => {
     normalizeAndMountModel(gltf.scene, "Sample Organ");
