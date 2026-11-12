@@ -46,6 +46,11 @@ let meshList = [];
 let isPulsing = false;
 let labelsVisible = true;
 let rulerMode = false;
+let quizMode = false;
+
+let quizTargetMesh = null;
+let quizScore = 0;
+let quizTotal = 0;
 
 let rulerPointA = null;
 let rulerPointB = null;
@@ -92,6 +97,9 @@ const modelUpload = document.getElementById('modelUpload');
 const modelStatus = document.getElementById('modelStatus');
 const labelToggle = document.getElementById('labelToggle');
 const rulerToggle = document.getElementById('rulerToggle');
+const quizToggle = document.getElementById('quizToggle');
+const quizBanner = document.getElementById('quiz-banner');
+const quizPrompt = document.getElementById('quizPrompt');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -104,7 +112,34 @@ if (menuToggle && controlPanel) {
     });
 }
 
-// Label Visibility Toggle
+// Quiz Mode Toggle
+quizToggle.addEventListener('click', () => {
+    quizMode = !quizMode;
+    quizToggle.classList.toggle('active-mode', quizMode);
+    
+    if (quizMode) {
+        quizScore = 0;
+        quizTotal = 0;
+        quizToggle.innerText = '⏹ Exit Quiz Mode';
+        quizBanner.style.display = 'block';
+        nextQuizQuestion();
+    } else {
+        quizToggle.innerText = '🎓 Start Quiz Mode';
+        quizBanner.style.display = 'none';
+        quizTargetMesh = null;
+    }
+    controlPanel.classList.remove('open');
+});
+
+function nextQuizQuestion() {
+    if (!meshList.length || !quizMode) return;
+    const available = meshList.filter(m => m.visible);
+    if (available.length === 0) return;
+
+    quizTargetMesh = available[Math.floor(Math.random() * available.length)];
+    quizPrompt.innerText = `Find and click: "${quizTargetMesh.name}" (Score: ${quizScore}/${quizTotal})`;
+}
+
 labelToggle.addEventListener('click', () => {
     labelsVisible = !labelsVisible;
     labelToggle.classList.toggle('active-mode', !labelsVisible);
@@ -118,7 +153,6 @@ labelToggle.addEventListener('click', () => {
     }
 });
 
-// Ruler Tool Toggle
 rulerToggle.addEventListener('click', () => {
     rulerMode = !rulerMode;
     rulerToggle.classList.toggle('active-mode', rulerMode);
@@ -306,7 +340,21 @@ function clearSelectionUI() {
     hideBtn.style.display = 'none';
 }
 
+function deselectCurrentMesh() {
+    if (selectedMesh) {
+        selectedMesh.material = originalMaterial;
+        selectedMesh = null;
+        originalMaterial = null;
+        clearSelectionUI();
+    }
+}
+
 function selectAndFocusMesh(mesh) {
+    if (selectedMesh === mesh) {
+        deselectCurrentMesh();
+        return;
+    }
+
     if (selectedMesh && selectedMesh !== mesh) {
         selectedMesh.material = originalMaterial;
     }
@@ -321,6 +369,19 @@ function selectAndFocusMesh(mesh) {
 
     const partName = selectedMesh.name || "Anatomical Structure Segment";
     document.getElementById('selectedPartName').innerText = partName;
+
+    if (quizMode && quizTargetMesh) {
+        quizTotal++;
+        if (selectedMesh === quizTargetMesh) {
+            quizScore++;
+            quizPrompt.innerText = `✅ Correct! Well done. (Score: ${quizScore}/${quizTotal})`;
+            setTimeout(() => {
+                if (quizMode) nextQuizQuestion();
+            }, 1500);
+        } else {
+            quizPrompt.innerText = `❌ Incorrect. That was ${partName}. Try again! (Score: ${quizScore}/${quizTotal})`;
+        }
+    }
 
     const clinicalInfo = clinicalDatabase[partName] || {
         function: `Specialized morphological tissue segment (${partName}) maintaining structural integrity and physiological homeostasis.`,
@@ -362,11 +423,7 @@ resetViewBtn.addEventListener('click', () => {
             child.visible = true;
         }
     });
-    if (selectedMesh) {
-        selectedMesh.material = originalMaterial;
-        selectedMesh = null;
-    }
-    clearSelectionUI();
+    deselectCurrentMesh();
 });
 
 snapshotBtn.addEventListener('click', () => {
@@ -456,9 +513,8 @@ document.getElementById('viewLateralL').addEventListener('click', () => setCamer
 document.getElementById('viewLateralR').addEventListener('click', () => setCameraView(new THREE.Vector3(3.5, 0, 0)));
 document.getElementById('viewSuperior').addEventListener('click', () => setCameraView(new THREE.Vector3(0, 3.5, 0.001)));
 
-// Pointer / Click Handler for Selection & Ruler Measurement
 window.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('#control-panel') || event.target.closest('#menu-toggle') || event.target.closest('#selection-box')) return;
+    if (event.target.closest('#control-panel') || event.target.closest('#menu-toggle') || event.target.closest('#selection-box') || event.target.closest('#quiz-banner')) return;
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -471,7 +527,6 @@ window.addEventListener('pointerdown', (event) => {
             const hitPoint = intersects[0].point;
 
             if (rulerMode) {
-                // Ruler Measurement Logic
                 const markerGeo = new THREE.SphereGeometry(0.04, 16, 16);
                 const markerMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
 
@@ -488,7 +543,6 @@ window.addEventListener('pointerdown', (event) => {
                     rulerMarkerB.position.copy(rulerPointB);
                     scene.add(rulerMarkerB);
 
-                    // Draw Line between A and B
                     const lineGeo = new THREE.BufferGeometry().setFromPoints([rulerPointA, rulerPointB]);
                     const lineMat = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
                     rulerLine = new THREE.Line(lineGeo, lineMat);
@@ -498,11 +552,15 @@ window.addEventListener('pointerdown', (event) => {
                     document.getElementById('selectedPartName').innerText = "Ruler Measurement";
                     document.getElementById('selectedPartDesc').innerText = `Spatial Distance: ${(distance * 10.0).toFixed(1)} mm (${distance.toFixed(2)} units).`;
                     
-                    rulerPointA = null; // Reset for next measurement
+                    rulerPointA = null;
                     rulerPointB = null;
                 }
             } else {
                 selectAndFocusMesh(intersects[0].object);
+            }
+        } else {
+            if (!rulerMode) {
+                deselectCurrentMesh();
             }
         }
     }
