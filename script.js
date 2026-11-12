@@ -34,8 +34,8 @@ scene.add(directionalLight);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.minDistance = 0.5;   // Prevent camera from collapsing inside or flipping past center
-controls.maxDistance = 15.0;  // Prevent camera from flying away
+controls.minDistance = 0.5;   // Safe minimum zoom limit
+controls.maxDistance = 15.0;  // Safe maximum zoom limit
 
 let loadedModel = null;
 let baseColorHex = "#d9776c";
@@ -45,9 +45,6 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let selectedMesh = null;
 let originalMaterial = null;
-
-let targetCameraPos = null;
-let targetControlTarget = null;
 
 const menuToggle = document.getElementById('menu-toggle');
 const controlPanel = document.getElementById('control-panel');
@@ -170,12 +167,6 @@ function selectAndFocusMesh(mesh) {
     
     isolateBtn.style.display = 'block';
     hideBtn.style.display = 'block';
-
-    const meshBox = new THREE.Box3().setFromObject(selectedMesh);
-    const meshCenter = meshBox.getCenter(new THREE.Vector3());
-    
-    targetControlTarget = meshCenter.clone();
-    targetCameraPos = meshCenter.clone().add(new THREE.Vector3(0, 0.4, 1.8));
 }
 
 isolateBtn.addEventListener('click', () => {
@@ -316,16 +307,6 @@ document.getElementById('dirSlider').addEventListener('input', (e) => {
 
 function animate() {
     requestAnimationFrame(animate);
-
-    if (targetCameraPos && targetControlTarget) {
-        camera.position.lerp(targetCameraPos, 0.08);
-        controls.target.lerp(targetControlTarget, 0.08);
-        if (camera.position.distanceTo(targetCameraPos) < 0.01) {
-            targetCameraPos = null;
-            targetControlTarget = null;
-        }
-    }
-
     controls.update();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
