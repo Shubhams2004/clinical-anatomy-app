@@ -112,7 +112,6 @@ if (menuToggle && controlPanel) {
     });
 }
 
-// Quiz Mode Toggle
 quizToggle.addEventListener('click', () => {
     quizMode = !quizMode;
     quizToggle.classList.toggle('active-mode', quizMode);
@@ -304,9 +303,12 @@ function createFallbackAnatomy() {
 }
 
 const loader = new GLTFLoader();
+modelStatus.innerText = "Loading 3D asset...";
+
 loader.load('./models/sample_organ.glb', (gltf) => {
     normalizeAndMountModel(gltf.scene, "Sample Organ");
-}, undefined, () => {
+}, undefined, (err) => {
+    console.warn("Sample model not found, loading reference organ model.", err);
     createFallbackAnatomy();
 });
 
