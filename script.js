@@ -9,7 +9,11 @@ scene.background = new THREE.Color(0x111111);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.5, 4);
 
-const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.0);
+// Multi-Axis Clipping Planes (X, Y, Z)
+const clipPlaneX = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 2.0);
+const clipPlaneY = new THREE.Plane(new THREE.Vector3(0, -1, 0), 2.0);
+const clipPlaneZ = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.0);
+const activeClippingPlanes = [clipPlaneX, clipPlaneY, clipPlaneZ];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -87,7 +91,7 @@ function populateStructureTree() {
 function applyClippingAndAddLabels(object) {
     object.traverse((child) => {
         if (child.isMesh && child.material) {
-            child.material.clippingPlanes = [clipPlane];
+            child.material.clippingPlanes = activeClippingPlanes;
             child.material.clipShadows = true;
             child.material.side = THREE.DoubleSide;
 
@@ -113,7 +117,7 @@ function createFallbackAnatomy() {
         metalness: 0.1,
         transparent: true,
         opacity: 1.0,
-        clippingPlanes: [clipPlane],
+        clippingPlanes: activeClippingPlanes,
         side: THREE.DoubleSide
     });
 
@@ -180,7 +184,7 @@ function selectAndFocusMesh(mesh) {
 
     const highlightMaterial = selectedMesh.material.clone();
     highlightMaterial.color.setHex(0x4da6ff);
-    highlightMaterial.clippingPlanes = [clipPlane];
+    highlightMaterial.clippingPlanes = activeClippingPlanes;
     selectedMesh.material = highlightMaterial;
 
     const partName = selectedMesh.name || "Anatomical Structure Segment";
@@ -237,6 +241,25 @@ snapshotBtn.addEventListener('click', () => {
     link.click();
 });
 
+// Multi-Axis Slicing Listeners
+document.getElementById('clipX').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    clipPlaneX.constant = val;
+    document.getElementById('valX').innerText = val.toFixed(2);
+});
+
+document.getElementById('clipY').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    clipPlaneY.constant = val;
+    document.getElementById('valY').innerText = val.toFixed(2);
+});
+
+document.getElementById('clipZ').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    clipPlaneZ.constant = val;
+    document.getElementById('valZ').innerText = val.toFixed(2);
+});
+
 // Render Modality Switchers
 document.getElementById('modeSolid').addEventListener('click', () => {
     if (!loadedModel) return;
@@ -274,7 +297,6 @@ document.getElementById('modeXray').addEventListener('click', () => {
     controlPanel.classList.remove('open');
 });
 
-// Viewpoint Transitions
 function setCameraView(pos, target = new THREE.Vector3(0, 0, 0)) {
     targetCameraPos = pos;
     targetControlTarget = target;
@@ -337,12 +359,6 @@ if (searchInput) {
         }
     });
 }
-
-document.getElementById('clipSlider').addEventListener('input', (e) => {
-    const val = parseFloat(e.target.value);
-    clipPlane.constant = val;
-    document.getElementById('clipVal').innerText = val.toFixed(2);
-});
 
 document.getElementById('colorPicker').addEventListener('input', (e) => {
     baseColorHex = e.target.value;

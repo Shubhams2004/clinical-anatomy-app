@@ -60,13 +60,13 @@
         #control-panel h4 { margin: 15px 0 10px 0; color: #4da6ff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
         #control-panel h4:first-of-type { margin-top: 0; }
 
-        .control-group { margin-bottom: 16px; font-size: 13px; }
-        .control-group label { display: block; margin-bottom: 6px; color: #ddd; font-weight: 500; }
+        .control-group { margin-bottom: 14px; font-size: 13px; }
+        .control-group label { display: block; margin-bottom: 4px; color: #ddd; font-weight: 500; font-size: 12px; }
         .control-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #4da6ff; }
         .control-group input[type="color"] { width: 100%; height: 38px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
         
         #structureTree {
-            max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.3);
+            max-height: 130px; overflow-y: auto; background: rgba(0,0,0,0.3);
             border-radius: 6px; padding: 6px; border: 1px solid rgba(255,255,255,0.1);
             margin-bottom: 15px;
         }
@@ -152,6 +152,20 @@
             <div style="padding: 6px; font-size: 11px; color: #888; text-align: center;">Loading segments...</div>
         </div>
 
+        <h4>Multi-Axis Slicing (MPR)</h4>
+        <div class="control-group">
+            <label for="clipX">Sagittal (X-Axis): <span id="valX">2.0</span></label>
+            <input type="range" id="clipX" min="-2.0" max="2.0" step="0.05" value="2.0">
+        </div>
+        <div class="control-group">
+            <label for="clipY">Coronal (Y-Axis): <span id="valY">2.0</span></label>
+            <input type="range" id="clipY" min="-2.0" max="2.0" step="0.05" value="2.0">
+        </div>
+        <div class="control-group">
+            <label for="clipZ">Axial (Z-Axis): <span id="valZ">2.0</span></label>
+            <input type="range" id="clipZ" min="-2.0" max="2.0" step="0.05" value="2.0">
+        </div>
+
         <h4>Render Modality</h4>
         <div class="view-grid">
             <button class="view-btn" id="modeSolid">Solid View</button>
@@ -166,12 +180,6 @@
             <button class="view-btn" id="viewLateralL">Left Lateral</button>
             <button class="view-btn" id="viewLateralR">Right Lateral</button>
             <button class="view-btn" id="viewSuperior" style="grid-column: span 2;">Superior (Top)</button>
-        </div>
-
-        <h4>Cross-Section Slicing</h4>
-        <div class="control-group">
-            <label for="clipSlider">Z-Axis Slice Plane (<span id="clipVal">2.0</span>)</label>
-            <input type="range" id="clipSlider" min="-2.0" max="2.0" step="0.05" value="2.0">
         </div>
 
         <h4>Viewer Settings</h4>
