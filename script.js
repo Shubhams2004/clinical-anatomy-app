@@ -53,6 +53,22 @@ let originalMaterial = null;
 let targetCameraPos = null;
 let targetControlTarget = null;
 
+// Clinical Anatomy Knowledge Base Dictionary
+const clinicalDatabase = {
+    "Left Lobe Segment": {
+        function: "Primary parenchymal division responsible for metabolic processing, vascular filtration, and structural lobe volume.",
+        pathology: "Susceptible to focal parenchymal lesions, lobar hypertrophy, and localized ischemic infarcts."
+    },
+    "Right Lobe Segment": {
+        function: "Major lateral parenchymal lobe mediating systemic perfusion, fluid homeostasis, and biochemical synthesis.",
+        pathology: "Common site for nodular hyperplasia, cystic degeneration, and vascular congestion."
+    },
+    "Vascular Trunk": {
+        function: "Central hemodynamic conduit transporting oxygenated blood and critical nutrients to the superior parenchymal lobes.",
+        pathology: "Prone to atherosclerotic stenosis, aneurysmal dilation, and thromboembolic occlusion."
+    }
+};
+
 const menuToggle = document.getElementById('menu-toggle');
 const controlPanel = document.getElementById('control-panel');
 const isolateBtn = document.getElementById('isolateBtn');
@@ -61,6 +77,10 @@ const resetViewBtn = document.getElementById('resetViewBtn');
 const snapshotBtn = document.getElementById('snapshotBtn');
 const structureTree = document.getElementById('structureTree');
 const pulseToggle = document.getElementById('pulseToggle');
+const speakBtn = document.getElementById('speakBtn');
+const pathologyBox = document.getElementById('pathologyBox');
+const pathologyText = document.getElementById('pathologyText');
+const functionLabel = document.getElementById('functionLabel');
 
 if (menuToggle && controlPanel) {
     menuToggle.addEventListener('click', (e) => {
@@ -72,6 +92,21 @@ if (menuToggle && controlPanel) {
         controlPanel.classList.remove('open');
     });
 }
+
+// Web Speech API Pronunciation Handler
+speakBtn.addEventListener('click', () => {
+    if (!selectedMesh) return;
+    const textToSpeak = selectedMesh.name || "Anatomical Segment";
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop any ongoing speech
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 0.9; // Slightly slower for clear medical pronunciation
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+    } else {
+        alert("Audio pronunciation is not supported in this browser.");
+    }
+});
 
 function populateStructureTree() {
     if (!structureTree) return;
@@ -175,6 +210,16 @@ loader.load('./models/sample_organ.glb', (gltf) => {
     createFallbackAnatomy();
 });
 
+function clearSelectionUI() {
+    document.getElementById('selectedPartName').innerText = "Select a Structure";
+    document.getElementById('selectedPartDesc').innerText = "Tap any anatomical segment to inspect clinical metadata & pathology notes.";
+    functionLabel.style.display = 'none';
+    pathologyBox.style.display = 'none';
+    speakBtn.style.display = 'none';
+    isolateBtn.style.display = 'none';
+    hideBtn.style.display = 'none';
+}
+
 function selectAndFocusMesh(mesh) {
     if (selectedMesh && selectedMesh !== mesh) {
         selectedMesh.material = originalMaterial;
@@ -190,7 +235,19 @@ function selectAndFocusMesh(mesh) {
 
     const partName = selectedMesh.name || "Anatomical Structure Segment";
     document.getElementById('selectedPartName').innerText = partName;
-    document.getElementById('selectedPartDesc').innerText = "Clinical status: Active segment. Verified 3D morphological asset.";
+
+    // Lookup Clinical Data or Provide Standard Fallback Metadata
+    const clinicalInfo = clinicalDatabase[partName] || {
+        function: `Specialized morphological tissue segment (${partName}) maintaining structural integrity and physiological homeostasis.`,
+        pathology: "Evaluate for localized inflammation, structural hypertrophy, or vascular compromise."
+    };
+
+    functionLabel.style.display = 'block';
+    document.getElementById('selectedPartDesc').innerText = clinicalInfo.function;
+    
+    pathologyText.innerText = clinicalInfo.pathology;
+    pathologyBox.style.display = 'block';
+    speakBtn.style.display = 'flex';
     
     isolateBtn.style.display = 'block';
     hideBtn.style.display = 'block';
@@ -210,10 +267,7 @@ hideBtn.addEventListener('click', () => {
     selectedMesh.visible = false;
     selectedMesh.material = originalMaterial;
     selectedMesh = null;
-    document.getElementById('selectedPartName').innerText = "Select a Structure";
-    document.getElementById('selectedPartDesc').innerText = "Tap any anatomical segment to inspect clinical metadata.";
-    isolateBtn.style.display = 'none';
-    hideBtn.style.display = 'none';
+    clearSelectionUI();
 });
 
 resetViewBtn.addEventListener('click', () => {
@@ -227,10 +281,7 @@ resetViewBtn.addEventListener('click', () => {
         selectedMesh.material = originalMaterial;
         selectedMesh = null;
     }
-    document.getElementById('selectedPartName').innerText = "Select a Structure";
-    document.getElementById('selectedPartDesc').innerText = "Tap any anatomical segment to inspect clinical metadata.";
-    isolateBtn.style.display = 'none';
-    hideBtn.style.display = 'none';
+    clearSelectionUI();
 });
 
 snapshotBtn.addEventListener('click', () => {
@@ -242,7 +293,6 @@ snapshotBtn.addEventListener('click', () => {
     link.click();
 });
 
-// Cardiac/Physiological Pulse Toggle
 pulseToggle.addEventListener('click', () => {
     isPulsing = !isPulsing;
     if (isPulsing) {
@@ -255,7 +305,6 @@ pulseToggle.addEventListener('click', () => {
     }
 });
 
-// Multi-Axis Slicing Listeners
 document.getElementById('clipX').addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
     clipPlaneX.constant = val;
@@ -274,7 +323,6 @@ document.getElementById('clipZ').addEventListener('input', (e) => {
     document.getElementById('valZ').innerText = val.toFixed(2);
 });
 
-// Render Modality Switchers
 document.getElementById('modeSolid').addEventListener('click', () => {
     if (!loadedModel) return;
     loadedModel.traverse((child) => {
@@ -410,7 +458,6 @@ document.getElementById('dirSlider').addEventListener('input', (e) => {
 function animate() {
     requestAnimationFrame(animate);
 
-    // Physiological Pulsation Simulation Loop
     if (isPulsing && loadedModel) {
         const pulse = 1.0 + Math.sin(Date.now() * 0.006) * 0.04;
         loadedModel.scale.set(pulse, pulse, pulse);
